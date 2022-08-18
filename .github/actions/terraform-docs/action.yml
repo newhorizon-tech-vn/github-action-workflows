@@ -1,0 +1,57 @@
+name: (Action) terraform docs
+description: Uses terraform-docs to automatically generate documentation and add it to the readme file
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository (PR)
+      uses: actions/checkout@v2
+      if: github.event_name == 'pull_request'
+      with:
+        fetch-depth: 1
+        # Needed for PR workflows
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        ref: ${{ github.event.pull_request.head.ref }}
+        # ref: ${{ github.event.pull_request.ref }}
+
+    - name: Checkout Repository (push)
+      uses: actions/checkout@v2
+      if: github.event_name != 'pull_request'
+      with:
+        fetch-depth: 1
+        ref: ${{ github.event.ref }}
+        # ref: ${{ github.event.base_ref }}
+
+    - name: Copy the terraform-docs config file from the action to the target repo
+      shell: bash
+      working-directory: '.'
+      run: cp ${{ github.action_path }}/.terraform-docs.yaml .terraform-docs.yaml
+
+    - name: Append .terraform-docs.yaml to .gitignore
+      shell: bash
+      working-directory: '.'
+      run: |
+        rval=$(cat .gitignore | grep .terraform-docs.yaml || echo "NOT_SET")
+        if [[ "$rval" == "NOT_SET" ]] ; then echo -e "\n.terraform-docs.yaml" >> .gitignore ; fi
+
+    - name: Ensure code-quality pipeline badge is visible in the README.md file
+      shell: bash
+      working-directory: '.'
+      run: |
+        export BADGE_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/$GITHUB_WORKFLOW
+        echo $BADGE_URL
+        rval=$(head -n 1 README.md | grep 'Code quality' || echo "NOT_SET")
+        if [[ "$rval" == "NOT_SET" ]] ; then echo 'BADGE MISSING!' ; fi
+
+    - name: Render terraform docs and push changes back to PR
+      uses: terraform-docs/gh-actions@v1.0.0
+      with:
+        working-dir: .
+        output-file: README.md
+        output-method: inject
+        git-push: "true"
+        git-commit-message: Terraform documentation update
+        git-push-user-email: devops@
+        # Use the terraform-docs config file from this actions repo instead of the project repos
+        config-file: .terraform-docs.yaml
+        template: "[comment]: # (BEGIN_TF_DOCS)\n\n## Terraform auto-docs\n\nThis is managed by Github Actions now. Just commit your code and let the pipeline do the rest.\n\n{{ .Content }}\n\n[comment]: # (END_TF_DOCS)"

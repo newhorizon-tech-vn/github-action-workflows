@@ -1,0 +1,26 @@
+name: (Workflow) Terraform code quality pipeline
+# This is the reusable (standard) terraform code quality pipeline, for service and resource modules.
+
+on:
+  workflow_call:
+
+jobs:
+  lint-terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: terraform code lint
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-code-lint-autofix@main
+
+  lint-generic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: generic code lint
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/generic-code-lint@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  run-checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - name: run checkov static analysis
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-checkov@main

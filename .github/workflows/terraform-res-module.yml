@@ -1,0 +1,60 @@
+name: Terraform code quality check - resource module
+# This is the reusable (standard) terraform code quality pipeline, resource modules.
+
+on:
+  workflow_call:
+    secrets:
+      TFE_TOKEN:
+        required: true
+
+jobs:
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: terraform validate
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-code-validate@main
+        env:
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
+
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: terraform fmt
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-code-lint-autofix@main
+        env:
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
+
+  generic-lint:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - name: generic code lint
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/generic-code-lint@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  terraform-docs:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    needs:
+      - terraform-fmt
+    permissions:
+      contents: write
+    steps:
+      - name: terraform-docs update
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-docs@main
+
+  terraform-checkov:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - name: checkov static analysis
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-checkov@main
+        env:
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}

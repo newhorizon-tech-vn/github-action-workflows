@@ -1,0 +1,31 @@
+name: (Action) terraform code lint
+description: Runs terraform fmt, init and validate to check terraform code quality. Will not fix problems for you.
+
+inputs:
+  dir:
+    description: 'Working directory inside the repo of the terraform code'
+    required: false
+    default: '.'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+        # Needed for PR workflows
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        ref: ${{ github.event.pull_request.head.ref }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: "1.2.0"
+
+    # Method 1: Terraform format check and fail on issues. This is annoying to work with
+    # and wastes dev time.
+    - name: Run `terraform fmt` and fail pipeline if there are linting issues
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: terraform fmt -diff -check -no-color -recursive

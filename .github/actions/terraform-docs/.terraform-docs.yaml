@@ -1,0 +1,26 @@
+formatter: "markdown table"
+output:
+  file: README.md
+  mode: inject
+
+  # FYI - if updating the template, then please also set it in in `action.yml`.
+  # The original is located here:
+  # https://github.com/newhorizon-tech-vn/github-action-workflows/blob/main/.github/actions/terraform-docs/.terraform-docs.yaml
+  template: |
+    [comment]: # (BEGIN_TF_DOCS)
+    
+    ## Terraform auto-docs
+    
+    This is managed by Github Actions now. Just commit your code and let the pipeline do the rest.
+    
+    {{ .Content }}
+    
+    [comment]: # (END_TF_DOCS)
+
+settings:
+  anchor: false
+  hide-empty: true
+  html: false
+  lockfile: false
+  read-comments: true
+  type: true

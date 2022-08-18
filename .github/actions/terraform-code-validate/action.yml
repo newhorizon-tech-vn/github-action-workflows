@@ -1,0 +1,44 @@
+name: (Action) terraform code validate
+description: Runs terraform init and validate to check terraform code quality. Will not fix problems for you.
+
+inputs:
+  dir:
+    description: 'Working directory inside the repo of the terraform code'
+    required: false
+    default: '.'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+        # Needed for PR workflows
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        ref: ${{ github.event.pull_request.head.ref }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: "1.2.0"
+
+    - name: Add any testfiles to the repo
+      id: testfiles
+      shell: bash
+      working-directory: '.'
+      run: |
+        if [ -d ".github/testfiles" ] ; then cp .github/testfiles/* ${{ inputs.dir }}/ ; fi
+        if [ -f .github/testfiles/.env ] ; then export TF_ENVVARS=$(cat .github/testfiles/.env | xargs) ; fi
+        echo "::set-output name=tf-envvars::$TF_ENVVARS"
+
+    # Check the module works and run terraform validate on it.
+    - name: Run `terraform init`
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: ${{ steps.testfiles.outputs.tf-envvars }} terraform init
+
+    - name: Run `terraform validate`
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: ${{ steps.testfiles.outputs.tf-envvars }} terraform validate -no-color

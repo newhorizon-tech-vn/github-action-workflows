@@ -1,0 +1,17 @@
+name: npm lint
+
+on:
+  workflow_call:
+
+jobs:
+  install:
+        runs-on: self-hosted
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-node@v2
+              with:
+                  node-version: 16
+                  # registry-url: https://npm.pkg.github.com/
+
+            - name: 'npm lint'
+              run: npm lint

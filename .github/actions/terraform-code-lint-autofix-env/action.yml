@@ -1,0 +1,52 @@
+name: (Action) terraform code lint for env modules
+description: Runs terraform fmt, init and validate to check terraform code quality. Will fix problems for you by creating a commit.
+
+inputs:
+  import_module_filename:
+    description: The name of the file where the service module is imported, for example "svc-attendance.tf".
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository (PR)
+      uses: actions/checkout@v2
+      if: github.event_name == 'pull_request'
+      with:
+        fetch-depth: 1
+        # Needed for PR workflows
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        ref: ${{ github.event.pull_request.head.ref }}
+        # ref: ${{ github.event.pull_request.ref }}
+
+    - name: Checkout Repository (push)
+      uses: actions/checkout@v2
+      if: github.event_name != 'pull_request'
+      with:
+        fetch-depth: 1
+        ref: ${{ github.event.ref }}
+        # ref: ${{ github.event.base_ref }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: "1.2.0"
+
+    # Method 2: Terraform format check and autofix issues. This is a lot easier to work with.
+    - name: Run `terraform fmt` in a find loop, and fix linting issues
+      shell: bash
+      working-directory: '.'
+      run: |
+        find . -name '${{ inputs.import_module_filename }}' -execdir bash -c "terraform fmt -diff -recursive ;" \;
+
+    - name: Commit linter changes if there are any
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: '*/*.tf'
+        author_name: "GitHub Actions Bot"
+        author_email: "devops@"
+        committer_name: "GitHub Actions Bot"
+        committer_email: "devops@"
+        default_author: github_actions
+        message: 'Terraform auto formatter'
+        pathspec_error_handling: ignore

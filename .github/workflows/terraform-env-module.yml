@@ -1,0 +1,103 @@
+name: Terraform code quality check - env module
+# This is the reusable (standard) terraform code quality pipeline, env modules.
+
+on:
+  workflow_call:
+    inputs:
+      import_module_filename:
+        type: string
+        description: The name of the file where the service module is imported, for example "svc-attendance.tf".
+        required: true
+    secrets:
+      TFE_TOKEN:
+        required: true
+
+jobs:
+  lint-generic:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - name: generic code lint
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/generic-code-lint@main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  find-envs:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    outputs:
+      matrix: ${{ steps.find-envs.outputs.matrix }}
+      latest-version: ${{ steps.find-latest-version.outputs.latest-version }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - id: find-envs
+        run: |
+          environments=$(find . -name ${{ inputs.import_module_filename }} | cut -c3- | cut -d '/' -f 1)
+          echo $environments
+          matrix=$((
+            echo '{ "env" : ['
+            echo $environments | sed -r 's/(.*)/"\1"/' | sed -r 's/[[:space:]]+/","/g' | paste -s -d, -
+            echo " ]}"
+          ) | jq -c .)
+          echo $matrix
+          echo $matrix | jq .
+          echo "::set-output name=matrix::$matrix"
+      - id: find-latest-version
+        run: |
+          latest=$(find . -name ${{ inputs.import_module_filename }} -exec bash -c 'grep "\sversion\s=" {} | cut -d "=" -f 2 | sed "s/\"//g"' \; | sort --version-sort -r | head -n 1 | xargs)
+          echo "::set-output name=latest-version::$latest"
+
+  terraform-lint:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    outputs:
+      matrix: ${{ steps.find-envs.outputs.matrix }}
+      latest-version: ${{ steps.find-latest-version.outputs.latest-version }}
+    steps:
+      - name: terraform code lint
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-code-lint-autofix-env@main
+        with:
+          import_module_filename: ${{ inputs.import_module_filename }}
+        env:
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
+
+  terraform-quality:
+    # Use matrix strategy to verify the quality inside each environment
+    needs: find-envs
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    strategy:
+      matrix: ${{fromJson(needs.find-envs.outputs.matrix)}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: terraform code validate
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-code-validate@main
+        with:
+          dir: ${{ matrix.env }}
+        env:
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
+
+      - name: compare service module version to latest
+        shell: bash
+        working-directory: '.'
+        run: |
+          filename=${{ matrix.env }}/${{ inputs.import_module_filename }}
+          this_version=$(grep version $filename | cut -d "=" -f 2 | sed "s/\"//g" | xargs)
+          file_lineno=$(grep -n version $filename | cut -d ":" -f 1)
+          latest_version="${{ needs.find-envs.outputs.latest-version }}"
+          if [ "$this_version" != "$latest_version" ] ; then echo "::warning file=$filename,line=$file_lineno,endLine=$file_lineno,title=old version::environment ${{ matrix.env }} is on version $this_version, but the latest seen is $latest_version" ; fi
+
+      - name: checkov static analysis
+        uses: newhorizon-tech-vn/github-action-workflows/.github/actions/terraform-checkov@main
+        with:
+          dir: ${{ matrix.env }}
+        env:
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
