@@ -16,15 +16,15 @@ jobs:
                   node-version: 16
                   # registry-url: https://npm.pkg.github.com/
 
-            - name: 'Install NPM dependencies'
-#               run: npm ci
-              run: npm install
-              env:
-                NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-
             - name: Cache node_modules
               id: cache-node-modules
               uses: actions/cache@v2
               with:
                 path: node_modules
                 key: node-modules-${{ hashFiles('package-lock.json') }}   
+                
+            - name: 'Install NPM dependencies'
+#               run: npm ci
+              run: npm install
+              env:
+                NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
