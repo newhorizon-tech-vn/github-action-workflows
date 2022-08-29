@@ -24,10 +24,15 @@ jobs:
                 path: node_modules
                 key: node-modules-${{ hashFiles('package-lock.json') }}                  
 
-            - name: 'npm prepare'
+            - name: 'npm run prepare'
               run: npm run prepare
               
-            - name: 'npm publish'
+            - name: 'npm run release'
               run: npm run release
               env:
                   NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}              
+
+            - name: 'npm publish'
+              run: git push --follow-tags origin main && npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
