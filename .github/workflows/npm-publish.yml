@@ -15,7 +15,7 @@ jobs:
             - uses: actions/setup-node@v2
               with:
                   node-version: 16
-                  # registry-url: https://npm.pkg.github.com/
+                  registry-url: https://npm.pkg.github.com/
 
             - name: Restore node_modules
               id: cache-node-modules
@@ -24,5 +24,10 @@ jobs:
                 path: node_modules
                 key: node-modules-${{ hashFiles('package-lock.json') }}                  
 
+            - name: 'npm prepare'
+              run: npm run prepare
+              
             - name: 'npm publish'
               run: npm run release
+              env:
+                  NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}              
