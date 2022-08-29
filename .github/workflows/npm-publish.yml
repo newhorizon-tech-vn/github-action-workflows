@@ -7,10 +7,10 @@ jobs:
   install:
         runs-on: self-hosted
         steps:
-            - name: 'Download a single artifact'
-              uses: actions/download-artifact@v3
-              with:
-                name: dist    
+#             - name: 'Download a single artifact'
+#               uses: actions/download-artifact@v3
+#               with:
+#                 name: dist    
             - uses: actions/checkout@v2
             - uses: actions/setup-node@v2
               with:
