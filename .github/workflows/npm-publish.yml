@@ -25,4 +25,4 @@ jobs:
                 key: node-modules-${{ hashFiles('package-lock.json') }}                  
 
             - name: 'npm publish'
-              run: npm release
+              run: npm run release
