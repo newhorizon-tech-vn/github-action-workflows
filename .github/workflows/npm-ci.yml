@@ -2,6 +2,9 @@ name: npm ci
 
 on:
   workflow_call:
+    secrets:
+      NODE_AUTH_TOKEN:
+        required: false  
 
 jobs:
   install:
@@ -15,3 +18,5 @@ jobs:
 
             - name: 'Install NPM dependencies'
               run: npm ci
+              env:
+                NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}              
