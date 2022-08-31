@@ -23,12 +23,11 @@ jobs:
             - name: 'Download a single artifact'
               uses: actions/download-artifact@v3
               with:
-                name: dist    
+                name: dist
+                path: dist
                 
             - name: 'npm run prepare'
               run: |
-                ls -la
-                ls -la dist/ || true
                 npm run prepare
               
             - name: 'npm run release'
@@ -38,7 +37,6 @@ jobs:
 
             - name: 'npm publish'
               run: |
-                ls -la
                 ls -la dist/ || true
                 git push --follow-tags origin main && npm publish
               env:
