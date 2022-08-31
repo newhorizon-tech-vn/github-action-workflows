@@ -7,10 +7,6 @@ jobs:
   install:
         runs-on: self-hosted
         steps:
-            - name: 'Download a single artifact'
-              uses: actions/download-artifact@v3
-              with:
-                name: dist    
             - uses: actions/checkout@v2
             - uses: actions/setup-node@v2
               with:
@@ -24,8 +20,16 @@ jobs:
                 path: node_modules
                 key: node-modules-${{ hashFiles('package-lock.json') }}                  
 
+            - name: 'Download a single artifact'
+              uses: actions/download-artifact@v3
+              with:
+                name: dist    
+                
             - name: 'npm run prepare'
-              run: npm run prepare
+              run: |
+                ls -la
+                ls -la dist/ || true
+                npm run prepare
               
             - name: 'npm run release'
               run: npm run release
@@ -33,6 +37,9 @@ jobs:
                   NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}              
 
             - name: 'npm publish'
-              run: git push --follow-tags origin main && npm publish
+              run: |
+                ls -la
+                ls -la dist/ || true
+                git push --follow-tags origin main && npm publish
               env:
                   NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
